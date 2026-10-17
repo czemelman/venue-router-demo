@@ -1,0 +1,107 @@
+[
+  {
+    "name": "Small retail BTC sell, midday",
+    "description": "5k USD, standard customer, weekday noon. Exchanges win on spread; OTC desks quote wide on small size.",
+    "input": {
+      "customer": { "id": "cust-1001", "tier": "standard", "importanceScore": 20 },
+      "txn": { "asset": "BTC", "fiat": "USD", "amountUsd": 5000, "urgency": "standard", "requestedAt": "2026-10-14T12:00:00Z" }
+    },
+    "expect": { "strategy": "best_price", "fallbackChain[0]": "northgate", "fallbackChain.length": 4, "flags.length": 0, "requiresApproval": false }
+  },
+  {
+    "name": "Platinum instant ETH sell",
+    "description": "150k USD ETH, platinum, instant: latency-weighted policy.",
+    "input": {
+      "customer": { "id": "cust-0007", "tier": "platinum", "importanceScore": 95 },
+      "txn": { "asset": "ETH", "fiat": "USD", "amountUsd": 150000, "urgency": "instant", "requestedAt": "2026-10-14T15:00:00Z" }
+    },
+    "expect": { "strategy": "fastest", "fallbackChain[0]": "northgate", "flags.length": 0 }
+  },
+  {
+    "name": "High-importance standard-tier instant sell",
+    "description": "Importance score 85 triggers the same fast-lane policy as platinum.",
+    "input": {
+      "customer": { "id": "cust-2210", "tier": "standard", "importanceScore": 85 },
+      "txn": { "asset": "BTC", "fiat": "USD", "amountUsd": 20000, "urgency": "instant", "requestedAt": "2026-10-14T10:00:00Z" }
+    },
+    "expect": { "strategy": "fastest", "flags.length": 0 }
+  },
+  {
+    "name": "2M USDC sell, weekday",
+    "description": "Large size, standard urgency: best price, and only OTC desks can absorb 2M whole.",
+    "input": {
+      "customer": { "id": "cust-3100", "tier": "gold", "importanceScore": 60 },
+      "txn": { "asset": "USDC", "fiat": "USD", "amountUsd": 2000000, "urgency": "standard", "requestedAt": "2026-10-13T11:00:00Z" }
+    },
+    "expect": { "strategy": "best_price", "fallbackChain": ["meridian-otc", "harbor-otc"], "flags.length": 0, "requiresApproval": false }
+  },
+  {
+    "name": "8M BTC block, weekday",
+    "description": "Block size on a weekday: split across the deep OTC desks, approval required.",
+    "input": {
+      "customer": { "id": "cust-4000", "tier": "gold", "importanceScore": 70 },
+      "txn": { "asset": "BTC", "fiat": "USD", "amountUsd": 8000000, "urgency": "standard", "requestedAt": "2026-10-14T12:00:00Z" }
+    },
+    "expect": { "strategy": "split", "fallbackChain[0]": "meridian-otc", "splitPlan.allocations.length": 2, "splitPlan.unallocatedUsd": 0, "flags~": ["BLOCK_APPROVAL"], "requiresApproval": true }
+  },
+  {
+    "name": "Same 8M BTC block, Saturday",
+    "description": "OTC desks are closed; split across exchanges only. Not enough liquidity to cover the order.",
+    "input": {
+      "customer": { "id": "cust-4000", "tier": "gold", "importanceScore": 70 },
+      "txn": { "asset": "BTC", "fiat": "USD", "amountUsd": 8000000, "urgency": "standard", "requestedAt": "2026-10-17T12:00:00Z" }
+    },
+    "expect": { "strategy": "split", "fallbackChain": ["northgate", "atlas"], "splitPlan.unallocatedUsd": 5900000, "flags~": ["BLOCK_APPROVAL", "SLIPPAGE_RISK", "INSUFFICIENT_LIQUIDITY"], "requiresApproval": true }
+  },
+  {
+    "name": "EUR pair only one venue supports",
+    "description": "BTC-EUR is quoted by atlas alone.",
+    "input": {
+      "customer": { "id": "cust-5005", "tier": "standard", "importanceScore": 30 },
+      "txn": { "asset": "BTC", "fiat": "EUR", "amountUsd": 25000, "urgency": "standard", "requestedAt": "2026-10-14T12:00:00Z" }
+    },
+    "expect": { "strategy": "best_price", "fallbackChain": ["atlas"], "flags.length": 0 }
+  },
+  {
+    "name": "All OTC desks down",
+    "description": "The 2M USDC sell again, but both OTC desks are down; no exchange can fill 2M whole.",
+    "factsOverrides": [
+      { "venueId": "meridian-otc", "status": "down" },
+      { "venueId": "harbor-otc", "status": "down" }
+    ],
+    "input": {
+      "customer": { "id": "cust-3100", "tier": "gold", "importanceScore": 60 },
+      "txn": { "asset": "USDC", "fiat": "USD", "amountUsd": 2000000, "urgency": "standard", "requestedAt": "2026-10-13T11:00:00Z" }
+    },
+    "expect": { "strategy": "best_price", "fallbackChain": [], "flags": ["NO_ROUTE"], "requiresApproval": true }
+  },
+  {
+    "name": "2M USDC sell after OTC hours",
+    "description": "Same order at 22:00 UTC: OTC desks are closed.",
+    "input": {
+      "customer": { "id": "cust-3100", "tier": "gold", "importanceScore": 60 },
+      "txn": { "asset": "USDC", "fiat": "USD", "amountUsd": 2000000, "urgency": "standard", "requestedAt": "2026-10-13T22:00:00Z" }
+    },
+    "expect": { "fallbackChain": [], "flags": ["NO_ROUTE"], "requiresApproval": true }
+  },
+  {
+    "name": "Northgate degraded, platinum instant sell",
+    "description": "Northgate is still the best-scoring venue (with a degraded penalty), so the guardrail flags it.",
+    "factsOverrides": [{ "venueId": "northgate", "status": "degraded" }],
+    "input": {
+      "customer": { "id": "cust-0007", "tier": "platinum", "importanceScore": 95 },
+      "txn": { "asset": "ETH", "fiat": "USD", "amountUsd": 150000, "urgency": "instant", "requestedAt": "2026-10-14T15:00:00Z" }
+    },
+    "expect": { "strategy": "fastest", "fallbackChain[0]": "northgate", "flags": ["DEGRADED_PRIMARY"] }
+  },
+  {
+    "name": "Northgate down, platinum instant sell",
+    "description": "With northgate down, routing moves to the next best venue.",
+    "factsOverrides": [{ "venueId": "northgate", "status": "down" }],
+    "input": {
+      "customer": { "id": "cust-0007", "tier": "platinum", "importanceScore": 95 },
+      "txn": { "asset": "ETH", "fiat": "USD", "amountUsd": 150000, "urgency": "instant", "requestedAt": "2026-10-14T15:00:00Z" }
+    },
+    "expect": { "strategy": "fastest", "fallbackChain[0]": "atlas", "flags.length": 0 }
+  }
+]

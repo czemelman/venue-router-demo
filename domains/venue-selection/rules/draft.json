@@ -1,0 +1,905 @@
+{
+  "contentType": "application/vnd.gorules.decision",
+  "nodes": [
+    {
+      "id": "in",
+      "type": "inputNode",
+      "name": "Request",
+      "position": {
+        "x": 60,
+        "y": 200
+      },
+      "content": {
+        "schema": ""
+      }
+    },
+    {
+      "id": "derive",
+      "type": "expressionNode",
+      "name": "Derive",
+      "position": {
+        "x": 360,
+        "y": 200
+      },
+      "content": {
+        "expressions": [
+          {
+            "id": "derive_e0",
+            "key": "pair",
+            "value": "txn.asset + \"-\" + txn.fiat"
+          },
+          {
+            "id": "derive_e1",
+            "key": "hourUtc",
+            "value": "d(txn.requestedAt).tz(\"UTC\").hour()"
+          },
+          {
+            "id": "derive_e2",
+            "key": "isWeekend",
+            "value": "d(txn.requestedAt).tz(\"UTC\").weekday() >= 6"
+          },
+          {
+            "id": "derive_e3",
+            "key": "sizeBucket",
+            "value": "txn.amountUsd < 50000 ? \"small\" : (txn.amountUsd < 500000 ? \"medium\" : (txn.amountUsd < 5000000 ? \"large\" : \"block\"))"
+          }
+        ],
+        "passThrough": true,
+        "inputField": null,
+        "outputPath": null,
+        "executionMode": "single"
+      }
+    },
+    {
+      "id": "strategy",
+      "type": "expressionNode",
+      "name": "Strategy rules",
+      "position": {
+        "x": 660,
+        "y": 200
+      },
+      "content": {
+        "expressions": [
+          {
+            "id": "strategy_g0",
+            "key": "strategy",
+            "value": "(((isWeekend) == true) and ((sizeBucket) in [(\"large\"), (\"block\")])) ? ((\"split\")) : ((((txn.urgency) == (\"instant\")) and (((customer.tier) == (\"platinum\")) or ((customer.importanceScore) >= 80))) ? ((\"fastest\")) : ((((sizeBucket) == (\"block\"))) ? ((\"split\")) : ((((sizeBucket) == (\"large\")) and ((txn.urgency) == (\"standard\"))) ? ((\"best_price\")) : ((\"best_price\")))))"
+          },
+          {
+            "id": "strategy_g1",
+            "key": "weights.price",
+            "value": "(((isWeekend) == true) and ((sizeBucket) in [(\"large\"), (\"block\")])) ? (0.6) : ((((txn.urgency) == (\"instant\")) and (((customer.tier) == (\"platinum\")) or ((customer.importanceScore) >= 80))) ? (0.3) : ((((sizeBucket) == (\"block\"))) ? (0.6) : ((((sizeBucket) == (\"large\")) and ((txn.urgency) == (\"standard\"))) ? (0.7) : (0.5))))"
+          },
+          {
+            "id": "strategy_g2",
+            "key": "weights.fill",
+            "value": "(((isWeekend) == true) and ((sizeBucket) in [(\"large\"), (\"block\")])) ? (0.3) : ((((txn.urgency) == (\"instant\")) and (((customer.tier) == (\"platinum\")) or ((customer.importanceScore) >= 80))) ? (0.3) : ((((sizeBucket) == (\"block\"))) ? (0.3) : ((((sizeBucket) == (\"large\")) and ((txn.urgency) == (\"standard\"))) ? (0.2) : (0.3))))"
+          },
+          {
+            "id": "strategy_g3",
+            "key": "weights.latency",
+            "value": "(((isWeekend) == true) and ((sizeBucket) in [(\"large\"), (\"block\")])) ? (0.1) : ((((txn.urgency) == (\"instant\")) and (((customer.tier) == (\"platinum\")) or ((customer.importanceScore) >= 80))) ? (0.4) : ((((sizeBucket) == (\"block\"))) ? (0.1) : ((((sizeBucket) == (\"large\")) and ((txn.urgency) == (\"standard\"))) ? (0.1) : (0.2))))"
+          },
+          {
+            "id": "strategy_g4",
+            "key": "maxSlippageBps",
+            "value": "(((isWeekend) == true) and ((sizeBucket) in [(\"large\"), (\"block\")])) ? (40) : ((((txn.urgency) == (\"instant\")) and (((customer.tier) == (\"platinum\")) or ((customer.importanceScore) >= 80))) ? (25) : ((((sizeBucket) == (\"block\"))) ? (35) : ((((sizeBucket) == (\"large\")) and ((txn.urgency) == (\"standard\"))) ? (30) : (30))))"
+          },
+          {
+            "id": "strategy_g5",
+            "key": "allowSplit",
+            "value": "(((isWeekend) == true) and ((sizeBucket) in [(\"large\"), (\"block\")])) ? (true) : ((((txn.urgency) == (\"instant\")) and (((customer.tier) == (\"platinum\")) or ((customer.importanceScore) >= 80))) ? (false) : ((((sizeBucket) == (\"block\"))) ? (true) : ((((sizeBucket) == (\"large\")) and ((txn.urgency) == (\"standard\"))) ? (false) : (false))))"
+          },
+          {
+            "id": "strategy_g6",
+            "key": "allowedKinds",
+            "value": "(((isWeekend) == true) and ((sizeBucket) in [(\"large\"), (\"block\")])) ? ((\"exchange\")) : ((((txn.urgency) == (\"instant\")) and (((customer.tier) == (\"platinum\")) or ((customer.importanceScore) >= 80))) ? ((\"any\")) : ((((sizeBucket) == (\"block\"))) ? ((\"any\")) : ((((sizeBucket) == (\"large\")) and ((txn.urgency) == (\"standard\"))) ? ((\"any\")) : ((\"any\")))))"
+          },
+          {
+            "id": "strategy_g7",
+            "key": "strategy__hit",
+            "value": "(((isWeekend) == true) and ((sizeBucket) in [(\"large\"), (\"block\")])) ? ((\"n4\")) : ((((txn.urgency) == (\"instant\")) and (((customer.tier) == (\"platinum\")) or ((customer.importanceScore) >= 80))) ? ((\"n10\")) : ((((sizeBucket) == (\"block\"))) ? ((\"n12\")) : ((((sizeBucket) == (\"large\")) and ((txn.urgency) == (\"standard\"))) ? ((\"n16\")) : ((\"default\")))))"
+          }
+        ],
+        "passThrough": true,
+        "inputField": null,
+        "outputPath": null,
+        "executionMode": "single"
+      }
+    },
+    {
+      "id": "elig",
+      "type": "expressionNode",
+      "name": "Venue availability",
+      "position": {
+        "x": 960,
+        "y": 200
+      },
+      "content": {
+        "expressions": [
+          {
+            "id": "elig_g0",
+            "key": "eligibleVenues",
+            "value": "filter(venues, (((#.status) == (\"down\")) or ((pair in #.pairs) == false) or ((#.kind != \"otc\" or (#.otcHoursUtc.start <= hourUtc and hourUtc < #.otcHoursUtc.end and (not #.otcHoursUtc.weekdaysOnly or not isWeekend))) == false) or ((allowedKinds == \"any\" or #.kind == allowedKinds) == false)) ? (false) : ((((allowSplit) == false) and ((txn.amountUsd > 0 ? #.availableLiquidityUsd / txn.amountUsd : 999) < 1)) ? (false) : ((((allowSplit) == true) and ((#.kind) == (\"otc\")) and ((txn.amountUsd > 0 ? #.availableLiquidityUsd / txn.amountUsd : 999) < 0.5)) ? (false) : ((((allowSplit) == true) and ((#.kind) == (\"exchange\")) and ((txn.amountUsd > 0 ? #.availableLiquidityUsd / txn.amountUsd : 999) < 0.1)) ? (false) : (true)))))"
+          }
+        ],
+        "passThrough": true,
+        "inputField": null,
+        "outputPath": null,
+        "executionMode": "single"
+      }
+    },
+    {
+      "id": "rank",
+      "type": "functionNode",
+      "name": "Score & rank",
+      "position": {
+        "x": 1260,
+        "y": 200
+      },
+      "content": {
+        "source": "/** Score & rank eligible venues; build a split plan when strategy is \"split\". */\nexport const handler = async (input) => {\n  const venues = input.eligibleVenues ?? [];\n  const w = input.weights;\n  const amount = input.txn.amountUsd;\n  const round = (n, d) => Math.round(n * 10 ** d) / 10 ** d;\n\n  // min-max normalise to 0..1 (1 = best); identical values all score 1\n  const norm = (vals, v, higherIsBetter) => {\n    const min = Math.min(...vals), max = Math.max(...vals);\n    if (max === min) return 1;\n    return higherIsBetter ? (v - min) / (max - min) : (max - v) / (max - min);\n  };\n  const spreads = venues.map((v) => v.spreadBps);\n  const fills = venues.map((v) => v.fillRate1h);\n  const lats = venues.map((v) => v.latencyP95Ms);\n\n  const rankedVenues = venues\n    .map((v) => {\n      const p = norm(spreads, v.spreadBps, false);\n      const f = norm(fills, v.fillRate1h, true);\n      const l = norm(lats, v.latencyP95Ms, false);\n      let score = w.price * p + w.fill * f + w.latency * l;\n      const reasons = [\n        `spread ${v.spreadBps}bps (price ${round(p, 2)})`,\n        `fill rate ${round(v.fillRate1h * 100, 1)}% (fill ${round(f, 2)})`,\n        `p95 latency ${v.latencyP95Ms}ms (latency ${round(l, 2)})`,\n      ];\n      if (v.status === 'degraded') { score *= 0.85; reasons.push('degraded: score x0.85'); }\n      return {\n        id: v.id, kind: v.kind, status: v.status, spreadBps: v.spreadBps,\n        availableLiquidityUsd: v.availableLiquidityUsd, score: round(score, 4), reasons,\n      };\n    })\n    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));\n\n  const out = { rankedVenues, fallbackChain: rankedVenues.map((v) => v.id) };\n\n  if (input.strategy === 'split' && rankedVenues.length > 0) {\n    // proportional to available liquidity across the top 3, capped at each venue's liquidity;\n    // slices under 5% of the order are dropped and the rest re-balanced.\n    let pool = rankedVenues.slice(0, 3);\n    const allocate = (p) => {\n      const total = p.reduce((s, v) => s + v.availableLiquidityUsd, 0);\n      const ratio = Math.min(1, amount / total);\n      return p.map((v) => ({ id: v.id, amountUsd: round(v.availableLiquidityUsd * ratio, 2) }));\n    };\n    let alloc = allocate(pool);\n    const kept = alloc.filter((a) => a.amountUsd >= amount * 0.05).map((a) => a.id);\n    if (kept.length > 0 && kept.length < alloc.length) {\n      pool = pool.filter((v) => kept.includes(v.id));\n      alloc = allocate(pool);\n    }\n    const allocated = alloc.reduce((s, a) => s + a.amountUsd, 0);\n    out.splitPlan = {\n      allocations: alloc.map((a) => ({ ...a, share: round(a.amountUsd / amount, 4) })),\n      unallocatedUsd: round(Math.max(0, amount - allocated), 2),\n    };\n  }\n  return { ...input, ...out };\n};\n"
+      }
+    },
+    {
+      "id": "prep",
+      "type": "expressionNode",
+      "name": "Guardrail inputs",
+      "position": {
+        "x": 1560,
+        "y": 200
+      },
+      "content": {
+        "expressions": [
+          {
+            "id": "prep_e0",
+            "key": "eligibleCount",
+            "value": "len(eligibleVenues)"
+          },
+          {
+            "id": "prep_e1",
+            "key": "bestStatus",
+            "value": "len(rankedVenues) > 0 ? rankedVenues[0].status : \"none\""
+          },
+          {
+            "id": "prep_e2",
+            "key": "slippageExceeded",
+            "value": "len(rankedVenues) > 0 and rankedVenues[0].spreadBps > maxSlippageBps"
+          },
+          {
+            "id": "prep_e3",
+            "key": "unallocatedUsd",
+            "value": "splitPlan.unallocatedUsd ?? 0"
+          }
+        ],
+        "passThrough": true,
+        "inputField": null,
+        "outputPath": null,
+        "executionMode": "single"
+      }
+    },
+    {
+      "id": "guard",
+      "type": "expressionNode",
+      "name": "Guardrails",
+      "position": {
+        "x": 1860,
+        "y": 200
+      },
+      "content": {
+        "expressions": [
+          {
+            "id": "guard_g0",
+            "key": "flags",
+            "value": "flatten([(((txn.amountUsd) >= 5000000)) ? ([(\"BLOCK_APPROVAL\")]) : ([]), (((eligibleCount) == 0)) ? ([(\"NO_ROUTE\")]) : ([]), (((bestStatus) == (\"degraded\"))) ? ([(\"DEGRADED_PRIMARY\")]) : ([]), (((slippageExceeded) == true)) ? ([(\"SLIPPAGE_RISK\")]) : ([]), (((unallocatedUsd) > 0)) ? ([(\"INSUFFICIENT_LIQUIDITY\")]) : ([])])"
+          },
+          {
+            "id": "guard_g1",
+            "key": "requiresApproval",
+            "value": "((((txn.amountUsd) >= 5000000)) ? (true) : (false)) or ((((eligibleCount) == 0)) ? (true) : (false)) or ((((bestStatus) == (\"degraded\"))) ? (false) : (false)) or ((((slippageExceeded) == true)) ? (false) : (false)) or ((((unallocatedUsd) > 0)) ? (true) : (false))"
+          },
+          {
+            "id": "guard_g2",
+            "key": "guardrails__hit",
+            "value": "[(((txn.amountUsd) >= 5000000)) ? ((\"n48\")) : (\"\"), (((eligibleCount) == 0)) ? ((\"n53\")) : (\"\"), (((bestStatus) == (\"degraded\"))) ? ((\"n58\")) : (\"\"), (((slippageExceeded) == true)) ? ((\"n63\")) : (\"\"), (((unallocatedUsd) > 0)) ? ((\"n68\")) : (\"\")]"
+          }
+        ],
+        "passThrough": true,
+        "inputField": null,
+        "outputPath": null,
+        "executionMode": "single"
+      }
+    },
+    {
+      "id": "result",
+      "type": "expressionNode",
+      "name": "Result",
+      "position": {
+        "x": 2160,
+        "y": 200
+      },
+      "content": {
+        "expressions": [
+          {
+            "id": "result_e0",
+            "key": "strategy",
+            "value": "strategy"
+          },
+          {
+            "id": "result_e1",
+            "key": "rankedVenues",
+            "value": "rankedVenues"
+          },
+          {
+            "id": "result_e2",
+            "key": "fallbackChain",
+            "value": "fallbackChain"
+          },
+          {
+            "id": "result_e3",
+            "key": "splitPlan",
+            "value": "splitPlan ?? null"
+          },
+          {
+            "id": "result_e4",
+            "key": "flags",
+            "value": "flags ?? []"
+          },
+          {
+            "id": "result_e5",
+            "key": "requiresApproval",
+            "value": "requiresApproval ?? false"
+          }
+        ],
+        "passThrough": false,
+        "inputField": null,
+        "outputPath": null,
+        "executionMode": "single"
+      }
+    },
+    {
+      "id": "out",
+      "type": "outputNode",
+      "name": "Decision",
+      "position": {
+        "x": 2460,
+        "y": 200
+      },
+      "content": {
+        "schema": ""
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e0",
+      "type": "edge",
+      "sourceId": "in",
+      "targetId": "derive"
+    },
+    {
+      "id": "e1",
+      "type": "edge",
+      "sourceId": "derive",
+      "targetId": "strategy"
+    },
+    {
+      "id": "e2",
+      "type": "edge",
+      "sourceId": "strategy",
+      "targetId": "elig"
+    },
+    {
+      "id": "e3",
+      "type": "edge",
+      "sourceId": "elig",
+      "targetId": "rank"
+    },
+    {
+      "id": "e4",
+      "type": "edge",
+      "sourceId": "rank",
+      "targetId": "prep"
+    },
+    {
+      "id": "e5",
+      "type": "edge",
+      "sourceId": "prep",
+      "targetId": "guard"
+    },
+    {
+      "id": "e6",
+      "type": "edge",
+      "sourceId": "guard",
+      "targetId": "result"
+    },
+    {
+      "id": "e7",
+      "type": "edge",
+      "sourceId": "result",
+      "targetId": "out"
+    }
+  ],
+  "policy": {
+    "strategy": {
+      "default": [
+        {
+          "actionId": "setStrategy",
+          "params": {
+            "strategy": "best_price",
+            "price": 0.5,
+            "fill": 0.3,
+            "latency": 0.2,
+            "maxSlippageBps": 30,
+            "allowSplit": false,
+            "allowedKinds": "any"
+          }
+        }
+      ],
+      "trees": [
+        {
+          "id": "n22",
+          "name": "Strategy",
+          "root": {
+            "id": "n21",
+            "type": "condition",
+            "when": {
+              "id": "n3",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n1",
+                  "kind": "test",
+                  "field": "isWeekend",
+                  "op": "=",
+                  "value": true
+                },
+                {
+                  "id": "n2",
+                  "kind": "test",
+                  "field": "sizeBucket",
+                  "op": "in",
+                  "value": [
+                    "large",
+                    "block"
+                  ]
+                }
+              ]
+            },
+            "then": {
+              "id": "n4",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "setStrategy",
+                  "params": {
+                    "strategy": "split",
+                    "price": 0.6,
+                    "fill": 0.3,
+                    "latency": 0.1,
+                    "maxSlippageBps": 40,
+                    "allowSplit": true,
+                    "allowedKinds": "exchange"
+                  }
+                }
+              ]
+            },
+            "else": {
+              "id": "n20",
+              "type": "condition",
+              "when": {
+                "id": "n9",
+                "kind": "group",
+                "combinator": "and",
+                "items": [
+                  {
+                    "id": "n5",
+                    "kind": "test",
+                    "field": "txn.urgency",
+                    "op": "=",
+                    "value": "instant"
+                  },
+                  {
+                    "id": "n8",
+                    "kind": "group",
+                    "combinator": "or",
+                    "items": [
+                      {
+                        "id": "n6",
+                        "kind": "test",
+                        "field": "customer.tier",
+                        "op": "=",
+                        "value": "platinum"
+                      },
+                      {
+                        "id": "n7",
+                        "kind": "test",
+                        "field": "customer.importanceScore",
+                        "op": ">=",
+                        "value": 80
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": {
+                "id": "n10",
+                "type": "actions",
+                "actions": [
+                  {
+                    "actionId": "setStrategy",
+                    "params": {
+                      "strategy": "fastest",
+                      "price": 0.3,
+                      "fill": 0.3,
+                      "latency": 0.4,
+                      "maxSlippageBps": 25,
+                      "allowSplit": false,
+                      "allowedKinds": "any"
+                    }
+                  }
+                ]
+              },
+              "else": {
+                "id": "n19",
+                "type": "condition",
+                "when": {
+                  "id": "n18",
+                  "kind": "group",
+                  "combinator": "and",
+                  "items": [
+                    {
+                      "id": "n11",
+                      "kind": "test",
+                      "field": "sizeBucket",
+                      "op": "=",
+                      "value": "block"
+                    }
+                  ]
+                },
+                "then": {
+                  "id": "n12",
+                  "type": "actions",
+                  "actions": [
+                    {
+                      "actionId": "setStrategy",
+                      "params": {
+                        "strategy": "split",
+                        "price": 0.6,
+                        "fill": 0.3,
+                        "latency": 0.1,
+                        "maxSlippageBps": 35,
+                        "allowSplit": true,
+                        "allowedKinds": "any"
+                      }
+                    }
+                  ]
+                },
+                "else": {
+                  "id": "n17",
+                  "type": "condition",
+                  "when": {
+                    "id": "n15",
+                    "kind": "group",
+                    "combinator": "and",
+                    "items": [
+                      {
+                        "id": "n13",
+                        "kind": "test",
+                        "field": "sizeBucket",
+                        "op": "=",
+                        "value": "large"
+                      },
+                      {
+                        "id": "n14",
+                        "kind": "test",
+                        "field": "txn.urgency",
+                        "op": "=",
+                        "value": "standard"
+                      }
+                    ]
+                  },
+                  "then": {
+                    "id": "n16",
+                    "type": "actions",
+                    "actions": [
+                      {
+                        "actionId": "setStrategy",
+                        "params": {
+                          "strategy": "best_price",
+                          "price": 0.7,
+                          "fill": 0.2,
+                          "latency": 0.1,
+                          "maxSlippageBps": 30,
+                          "allowSplit": false,
+                          "allowedKinds": "any"
+                        }
+                      }
+                    ]
+                  },
+                  "else": null
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "availability": {
+      "default": [
+        {
+          "actionId": "includeVenue",
+          "params": {}
+        }
+      ],
+      "trees": [
+        {
+          "id": "n47",
+          "name": "Availability",
+          "root": {
+            "id": "n46",
+            "type": "condition",
+            "when": {
+              "id": "n27",
+              "kind": "group",
+              "combinator": "or",
+              "items": [
+                {
+                  "id": "n23",
+                  "kind": "test",
+                  "field": "venue.status",
+                  "op": "=",
+                  "value": "down"
+                },
+                {
+                  "id": "n24",
+                  "kind": "test",
+                  "field": "venue.supportsPair",
+                  "op": "=",
+                  "value": false
+                },
+                {
+                  "id": "n25",
+                  "kind": "test",
+                  "field": "venue.openNow",
+                  "op": "=",
+                  "value": false
+                },
+                {
+                  "id": "n26",
+                  "kind": "test",
+                  "field": "venue.allowedByStrategy",
+                  "op": "=",
+                  "value": false
+                }
+              ]
+            },
+            "then": {
+              "id": "n28",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "excludeVenue",
+                  "params": {}
+                }
+              ]
+            },
+            "else": {
+              "id": "n45",
+              "type": "condition",
+              "when": {
+                "id": "n31",
+                "kind": "group",
+                "combinator": "and",
+                "items": [
+                  {
+                    "id": "n29",
+                    "kind": "test",
+                    "field": "allowSplit",
+                    "op": "=",
+                    "value": false
+                  },
+                  {
+                    "id": "n30",
+                    "kind": "test",
+                    "field": "venue.liquidityCoverage",
+                    "op": "<",
+                    "value": 1
+                  }
+                ]
+              },
+              "then": {
+                "id": "n32",
+                "type": "actions",
+                "actions": [
+                  {
+                    "actionId": "excludeVenue",
+                    "params": {}
+                  }
+                ]
+              },
+              "else": {
+                "id": "n44",
+                "type": "condition",
+                "when": {
+                  "id": "n36",
+                  "kind": "group",
+                  "combinator": "and",
+                  "items": [
+                    {
+                      "id": "n33",
+                      "kind": "test",
+                      "field": "allowSplit",
+                      "op": "=",
+                      "value": true
+                    },
+                    {
+                      "id": "n34",
+                      "kind": "test",
+                      "field": "venue.kind",
+                      "op": "=",
+                      "value": "otc"
+                    },
+                    {
+                      "id": "n35",
+                      "kind": "test",
+                      "field": "venue.liquidityCoverage",
+                      "op": "<",
+                      "value": 0.5
+                    }
+                  ]
+                },
+                "then": {
+                  "id": "n37",
+                  "type": "actions",
+                  "actions": [
+                    {
+                      "actionId": "excludeVenue",
+                      "params": {}
+                    }
+                  ]
+                },
+                "else": {
+                  "id": "n43",
+                  "type": "condition",
+                  "when": {
+                    "id": "n41",
+                    "kind": "group",
+                    "combinator": "and",
+                    "items": [
+                      {
+                        "id": "n38",
+                        "kind": "test",
+                        "field": "allowSplit",
+                        "op": "=",
+                        "value": true
+                      },
+                      {
+                        "id": "n39",
+                        "kind": "test",
+                        "field": "venue.kind",
+                        "op": "=",
+                        "value": "exchange"
+                      },
+                      {
+                        "id": "n40",
+                        "kind": "test",
+                        "field": "venue.liquidityCoverage",
+                        "op": "<",
+                        "value": 0.1
+                      }
+                    ]
+                  },
+                  "then": {
+                    "id": "n42",
+                    "type": "actions",
+                    "actions": [
+                      {
+                        "actionId": "excludeVenue",
+                        "params": {}
+                      }
+                    ]
+                  },
+                  "else": null
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "guardrails": {
+      "default": [],
+      "trees": [
+        {
+          "id": "n52",
+          "name": "Block-size order needs approval",
+          "root": {
+            "id": "n49",
+            "type": "condition",
+            "when": {
+              "id": "n51",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n50",
+                  "kind": "test",
+                  "field": "txn.amountUsd",
+                  "op": ">=",
+                  "value": 5000000
+                }
+              ]
+            },
+            "then": {
+              "id": "n48",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "addFlag",
+                  "params": {
+                    "flag": "BLOCK_APPROVAL"
+                  }
+                },
+                {
+                  "actionId": "requireApproval",
+                  "params": {}
+                }
+              ]
+            },
+            "else": null
+          }
+        },
+        {
+          "id": "n57",
+          "name": "No eligible venue",
+          "root": {
+            "id": "n54",
+            "type": "condition",
+            "when": {
+              "id": "n56",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n55",
+                  "kind": "test",
+                  "field": "eligibleCount",
+                  "op": "=",
+                  "value": 0
+                }
+              ]
+            },
+            "then": {
+              "id": "n53",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "addFlag",
+                  "params": {
+                    "flag": "NO_ROUTE"
+                  }
+                },
+                {
+                  "actionId": "requireApproval",
+                  "params": {}
+                }
+              ]
+            },
+            "else": null
+          }
+        },
+        {
+          "id": "n62",
+          "name": "Best venue is degraded",
+          "root": {
+            "id": "n59",
+            "type": "condition",
+            "when": {
+              "id": "n61",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n60",
+                  "kind": "test",
+                  "field": "bestStatus",
+                  "op": "=",
+                  "value": "degraded"
+                }
+              ]
+            },
+            "then": {
+              "id": "n58",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "addFlag",
+                  "params": {
+                    "flag": "DEGRADED_PRIMARY"
+                  }
+                }
+              ]
+            },
+            "else": null
+          }
+        },
+        {
+          "id": "n67",
+          "name": "Slippage risk",
+          "root": {
+            "id": "n64",
+            "type": "condition",
+            "when": {
+              "id": "n66",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n65",
+                  "kind": "test",
+                  "field": "slippageExceeded",
+                  "op": "=",
+                  "value": true
+                }
+              ]
+            },
+            "then": {
+              "id": "n63",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "addFlag",
+                  "params": {
+                    "flag": "SLIPPAGE_RISK"
+                  }
+                }
+              ]
+            },
+            "else": null
+          }
+        },
+        {
+          "id": "n72",
+          "name": "Not enough liquidity to fill",
+          "root": {
+            "id": "n69",
+            "type": "condition",
+            "when": {
+              "id": "n71",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n70",
+                  "kind": "test",
+                  "field": "unallocatedUsd",
+                  "op": ">",
+                  "value": 0
+                }
+              ]
+            },
+            "then": {
+              "id": "n68",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "addFlag",
+                  "params": {
+                    "flag": "INSUFFICIENT_LIQUIDITY"
+                  }
+                },
+                {
+                  "actionId": "requireApproval",
+                  "params": {}
+                }
+              ]
+            },
+            "else": null
+          }
+        }
+      ]
+    }
+  }
+}

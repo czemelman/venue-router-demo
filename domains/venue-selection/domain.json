@@ -1,0 +1,700 @@
+{
+  "name": "venue-selection",
+  "description": "Choose a trading venue (exchange or OTC desk) for a crypto-to-fiat sell.",
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "customer",
+      "txn"
+    ],
+    "properties": {
+      "customer": {
+        "type": "object",
+        "required": [
+          "id",
+          "tier",
+          "importanceScore"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Customer ID",
+            "default": "cust-1001"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "platinum",
+              "gold",
+              "standard"
+            ],
+            "default": "standard"
+          },
+          "importanceScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 40
+          }
+        }
+      },
+      "txn": {
+        "type": "object",
+        "required": [
+          "asset",
+          "fiat",
+          "amountUsd",
+          "urgency",
+          "requestedAt"
+        ],
+        "properties": {
+          "asset": {
+            "type": "string",
+            "enum": [
+              "BTC",
+              "ETH",
+              "USDC"
+            ],
+            "default": "BTC"
+          },
+          "fiat": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR"
+            ],
+            "default": "USD"
+          },
+          "amountUsd": {
+            "type": "number",
+            "minimum": 0,
+            "default": 10000
+          },
+          "urgency": {
+            "type": "string",
+            "enum": [
+              "instant",
+              "standard"
+            ],
+            "default": "standard"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time",
+            "default": "2026-10-14T12:00:00Z"
+          }
+        }
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "strategy": {
+        "type": "string",
+        "enum": [
+          "best_price",
+          "fastest",
+          "split"
+        ]
+      },
+      "rankedVenues": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "score": {
+              "type": "number"
+            },
+            "reasons": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "fallbackChain": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "splitPlan": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "flags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "requiresApproval": {
+        "type": "boolean"
+      }
+    }
+  },
+  "rules": {
+    "fields": [
+      {
+        "id": "customer.tier",
+        "label": "Customer tier",
+        "group": "Customer",
+        "type": "enum",
+        "expr": "customer.tier",
+        "options": [
+          "platinum",
+          "gold",
+          "standard"
+        ]
+      },
+      {
+        "id": "customer.importanceScore",
+        "label": "Customer importance score (0-100)",
+        "group": "Customer",
+        "type": "number",
+        "expr": "customer.importanceScore"
+      },
+      {
+        "id": "txn.asset",
+        "label": "Asset sold",
+        "group": "Transaction",
+        "type": "enum",
+        "expr": "txn.asset",
+        "options": [
+          "BTC",
+          "ETH",
+          "USDC"
+        ]
+      },
+      {
+        "id": "txn.fiat",
+        "label": "Payout currency",
+        "group": "Transaction",
+        "type": "enum",
+        "expr": "txn.fiat",
+        "options": [
+          "USD",
+          "EUR"
+        ]
+      },
+      {
+        "id": "pair",
+        "label": "Trading pair",
+        "group": "Transaction",
+        "type": "enum",
+        "expr": "pair",
+        "options": [
+          "BTC-USD",
+          "ETH-USD",
+          "USDC-USD",
+          "BTC-EUR",
+          "ETH-EUR",
+          "USDC-EUR"
+        ]
+      },
+      {
+        "id": "txn.amountUsd",
+        "label": "Order amount (USD)",
+        "group": "Transaction",
+        "type": "number",
+        "expr": "txn.amountUsd"
+      },
+      {
+        "id": "sizeBucket",
+        "label": "Order size bucket",
+        "group": "Transaction",
+        "type": "enum",
+        "expr": "sizeBucket",
+        "options": [
+          "small",
+          "medium",
+          "large",
+          "block"
+        ],
+        "hint": "small < 50k, medium < 500k, large < 5M, block ≥ 5M"
+      },
+      {
+        "id": "txn.urgency",
+        "label": "Urgency",
+        "group": "Transaction",
+        "type": "enum",
+        "expr": "txn.urgency",
+        "options": [
+          "instant",
+          "standard"
+        ]
+      },
+      {
+        "id": "isWeekend",
+        "label": "Is weekend (UTC)",
+        "group": "Time",
+        "type": "boolean",
+        "expr": "isWeekend"
+      },
+      {
+        "id": "hourUtc",
+        "label": "Hour of day (UTC)",
+        "group": "Time",
+        "type": "number",
+        "expr": "hourUtc"
+      },
+      {
+        "id": "meta.bucket",
+        "label": "Share of traffic",
+        "group": "Traffic",
+        "type": "percent",
+        "expr": "meta.bucket",
+        "hint": "Sends a stable percentage of requests down a branch (A/B tests, gradual rollouts). The same customer always gets the same answer."
+      },
+      {
+        "id": "strategy",
+        "label": "Chosen strategy",
+        "group": "Strategy result",
+        "type": "enum",
+        "expr": "strategy",
+        "options": [
+          "best_price",
+          "fastest",
+          "split"
+        ]
+      },
+      {
+        "id": "allowSplit",
+        "label": "Strategy allows split",
+        "group": "Strategy result",
+        "type": "boolean",
+        "expr": "allowSplit"
+      },
+      {
+        "id": "allowedKinds",
+        "label": "Venue kinds allowed",
+        "group": "Strategy result",
+        "type": "enum",
+        "expr": "allowedKinds",
+        "options": [
+          "any",
+          "exchange"
+        ]
+      },
+      {
+        "id": "maxSlippageBps",
+        "label": "Max slippage (bps)",
+        "group": "Strategy result",
+        "type": "number",
+        "expr": "maxSlippageBps"
+      },
+      {
+        "id": "venue.id",
+        "label": "Venue",
+        "group": "Venue",
+        "type": "enum",
+        "expr": "#.id",
+        "options": [
+          "northgate",
+          "atlas",
+          "meridian-otc",
+          "harbor-otc"
+        ]
+      },
+      {
+        "id": "venue.kind",
+        "label": "Venue kind",
+        "group": "Venue",
+        "type": "enum",
+        "expr": "#.kind",
+        "options": [
+          "exchange",
+          "otc"
+        ]
+      },
+      {
+        "id": "venue.status",
+        "label": "Venue status",
+        "group": "Venue",
+        "type": "enum",
+        "expr": "#.status",
+        "options": [
+          "up",
+          "degraded",
+          "down"
+        ]
+      },
+      {
+        "id": "venue.supportsPair",
+        "label": "Venue supports the pair",
+        "group": "Venue",
+        "type": "boolean",
+        "expr": "pair in #.pairs"
+      },
+      {
+        "id": "venue.openNow",
+        "label": "Venue open now",
+        "group": "Venue",
+        "type": "boolean",
+        "expr": "#.kind != \"otc\" or (#.otcHoursUtc.start <= hourUtc and hourUtc < #.otcHoursUtc.end and (not #.otcHoursUtc.weekdaysOnly or not isWeekend))",
+        "options": "Exchanges are always open; OTC desks only in their UTC business hours"
+      },
+      {
+        "id": "venue.allowedByStrategy",
+        "label": "Venue kind allowed by strategy",
+        "group": "Venue",
+        "type": "boolean",
+        "expr": "allowedKinds == \"any\" or #.kind == allowedKinds"
+      },
+      {
+        "id": "venue.liquidityCoverage",
+        "label": "Venue liquidity ÷ order amount",
+        "group": "Venue",
+        "type": "number",
+        "expr": "txn.amountUsd > 0 ? #.availableLiquidityUsd / txn.amountUsd : 999",
+        "options": "1 = venue can fill the whole order, 0.5 = half"
+      },
+      {
+        "id": "venue.spreadBps",
+        "label": "Venue spread (bps)",
+        "group": "Venue",
+        "type": "number",
+        "expr": "#.spreadBps"
+      },
+      {
+        "id": "venue.fillRate1h",
+        "label": "Venue fill rate, last hour (0-1)",
+        "group": "Venue",
+        "type": "number",
+        "expr": "#.fillRate1h"
+      },
+      {
+        "id": "venue.latencyP95Ms",
+        "label": "Venue p95 latency (ms)",
+        "group": "Venue",
+        "type": "number",
+        "expr": "#.latencyP95Ms"
+      },
+      {
+        "id": "eligibleCount",
+        "label": "Number of eligible venues",
+        "group": "Routing result",
+        "type": "number",
+        "expr": "eligibleCount"
+      },
+      {
+        "id": "bestStatus",
+        "label": "Status of best-ranked venue",
+        "group": "Routing result",
+        "type": "enum",
+        "expr": "bestStatus",
+        "options": [
+          "up",
+          "degraded",
+          "down",
+          "none"
+        ]
+      },
+      {
+        "id": "slippageExceeded",
+        "label": "Best venue spread exceeds max slippage",
+        "group": "Routing result",
+        "type": "boolean",
+        "expr": "slippageExceeded"
+      },
+      {
+        "id": "unallocatedUsd",
+        "label": "Split plan shortfall (USD)",
+        "group": "Routing result",
+        "type": "number",
+        "expr": "unallocatedUsd"
+      }
+    ],
+    "actions": [
+      {
+        "id": "setStrategy",
+        "label": "Use routing strategy",
+        "tone": "good",
+        "description": "Chooses how venues are scored and whether the order may be split.",
+        "params": [
+          {
+            "name": "strategy",
+            "label": "Strategy",
+            "type": "enum",
+            "default": "best_price",
+            "options": [
+              "best_price",
+              "fastest",
+              "split"
+            ]
+          },
+          {
+            "name": "price",
+            "label": "Weight: price",
+            "type": "number",
+            "default": 0.5,
+            "min": 0,
+            "max": 1,
+            "step": 0.05
+          },
+          {
+            "name": "fill",
+            "label": "Weight: fill rate",
+            "type": "number",
+            "default": 0.3,
+            "min": 0,
+            "max": 1,
+            "step": 0.05
+          },
+          {
+            "name": "latency",
+            "label": "Weight: latency",
+            "type": "number",
+            "default": 0.2,
+            "min": 0,
+            "max": 1,
+            "step": 0.05
+          },
+          {
+            "name": "maxSlippageBps",
+            "label": "Max slippage (bps)",
+            "type": "number",
+            "default": 30,
+            "min": 0,
+            "max": 1000,
+            "step": 1
+          },
+          {
+            "name": "allowSplit",
+            "label": "Allow splitting across venues",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "allowedKinds",
+            "label": "Venue kinds",
+            "type": "enum",
+            "default": "any",
+            "options": [
+              "any",
+              "exchange"
+            ]
+          }
+        ],
+        "emits": [
+          {
+            "output": "strategy",
+            "param": "strategy"
+          },
+          {
+            "output": "weights.price",
+            "param": "price"
+          },
+          {
+            "output": "weights.fill",
+            "param": "fill"
+          },
+          {
+            "output": "weights.latency",
+            "param": "latency"
+          },
+          {
+            "output": "maxSlippageBps",
+            "param": "maxSlippageBps"
+          },
+          {
+            "output": "allowSplit",
+            "param": "allowSplit"
+          },
+          {
+            "output": "allowedKinds",
+            "param": "allowedKinds"
+          }
+        ]
+      },
+      {
+        "id": "includeVenue",
+        "label": "Include venue",
+        "tone": "good",
+        "params": [],
+        "emits": [
+          {
+            "output": "include",
+            "value": true
+          }
+        ]
+      },
+      {
+        "id": "excludeVenue",
+        "label": "Exclude venue",
+        "tone": "bad",
+        "params": [],
+        "emits": [
+          {
+            "output": "include",
+            "value": false
+          }
+        ]
+      },
+      {
+        "id": "addFlag",
+        "label": "Add flag",
+        "tone": "warn",
+        "description": "Attaches a flag to the decision.",
+        "params": [
+          {
+            "name": "flag",
+            "label": "Flag name",
+            "type": "text",
+            "default": "FLAG"
+          }
+        ],
+        "emits": [
+          {
+            "output": "flags",
+            "param": "flag",
+            "merge": "append"
+          }
+        ]
+      },
+      {
+        "id": "requireApproval",
+        "label": "Require manual approval",
+        "tone": "bad",
+        "params": [],
+        "emits": [
+          {
+            "output": "requiresApproval",
+            "value": true,
+            "merge": "or"
+          }
+        ]
+      }
+    ],
+    "sets": [
+      {
+        "id": "strategy",
+        "title": "Strategy rules",
+        "description": "Pick how orders are routed: which strategy, scoring weights and slippage limit.",
+        "mode": "first",
+        "node": "strategy",
+        "fields": [
+          "customer.tier",
+          "customer.importanceScore",
+          "txn.asset",
+          "txn.fiat",
+          "pair",
+          "txn.amountUsd",
+          "sizeBucket",
+          "txn.urgency",
+          "isWeekend",
+          "hourUtc",
+          "meta.bucket"
+        ],
+        "actions": [
+          "setStrategy"
+        ],
+        "default": [
+          {
+            "actionId": "setStrategy",
+            "params": {
+              "strategy": "best_price",
+              "price": 0.5,
+              "fill": 0.3,
+              "latency": 0.2,
+              "maxSlippageBps": 30,
+              "allowSplit": false,
+              "allowedKinds": "any"
+            }
+          }
+        ]
+      },
+      {
+        "id": "availability",
+        "title": "Venue availability",
+        "description": "Decides, for each venue, whether it may receive this order. Runs once per venue.",
+        "mode": "first",
+        "node": "elig",
+        "filter": {
+          "key": "eligibleVenues",
+          "source": "venues"
+        },
+        "fields": [
+          "venue.id",
+          "venue.kind",
+          "venue.status",
+          "venue.supportsPair",
+          "venue.openNow",
+          "venue.allowedByStrategy",
+          "venue.liquidityCoverage",
+          "venue.spreadBps",
+          "venue.fillRate1h",
+          "venue.latencyP95Ms",
+          "strategy",
+          "allowSplit",
+          "allowedKinds",
+          "maxSlippageBps",
+          "customer.tier",
+          "customer.importanceScore",
+          "txn.asset",
+          "txn.fiat",
+          "pair",
+          "txn.amountUsd",
+          "sizeBucket",
+          "txn.urgency",
+          "isWeekend",
+          "hourUtc",
+          "meta.bucket"
+        ],
+        "actions": [
+          "includeVenue",
+          "excludeVenue"
+        ],
+        "default": [
+          {
+            "actionId": "includeVenue",
+            "params": {}
+          }
+        ]
+      },
+      {
+        "id": "guardrails",
+        "title": "Guardrails",
+        "description": "Independent checks on the result. Every rule that matches adds its flags and approvals.",
+        "mode": "all",
+        "node": "guard",
+        "multiAction": true,
+        "fields": [
+          "eligibleCount",
+          "bestStatus",
+          "slippageExceeded",
+          "unallocatedUsd",
+          "strategy",
+          "allowSplit",
+          "allowedKinds",
+          "maxSlippageBps",
+          "customer.tier",
+          "customer.importanceScore",
+          "txn.asset",
+          "txn.fiat",
+          "pair",
+          "txn.amountUsd",
+          "sizeBucket",
+          "txn.urgency",
+          "isWeekend",
+          "hourUtc",
+          "meta.bucket"
+        ],
+        "actions": [
+          "addFlag",
+          "requireApproval"
+        ],
+        "default": []
+      }
+    ]
+  },
+  "bucketBy": "customer.id"
+}

@@ -1,0 +1,584 @@
+{
+  "contentType": "application/vnd.gorules.decision",
+  "nodes": [
+    {
+      "id": "in",
+      "type": "inputNode",
+      "name": "Request",
+      "position": {
+        "x": 60,
+        "y": 200
+      },
+      "content": {
+        "schema": ""
+      }
+    },
+    {
+      "id": "derive",
+      "type": "expressionNode",
+      "name": "Derive",
+      "position": {
+        "x": 360,
+        "y": 200
+      },
+      "content": {
+        "expressions": [
+          {
+            "id": "derive_e0",
+            "key": "countryRisk",
+            "value": "destinationCountry in riskCountries.blocked ? \"blocked\" : (destinationCountry in riskCountries.high ? \"high\" : \"low\")"
+          },
+          {
+            "id": "derive_e1",
+            "key": "tierLimit",
+            "value": "tierLimits[customerTier]"
+          },
+          {
+            "id": "derive_e2",
+            "key": "overLimit",
+            "value": "amount > tierLimits[customerTier]"
+          }
+        ],
+        "passThrough": true,
+        "inputField": null,
+        "outputPath": null,
+        "executionMode": "single"
+      }
+    },
+    {
+      "id": "decision",
+      "type": "expressionNode",
+      "name": "Decision rules",
+      "position": {
+        "x": 660,
+        "y": 200
+      },
+      "content": {
+        "expressions": [
+          {
+            "id": "decision_g0",
+            "key": "decision",
+            "value": "(((countryRisk) == (\"blocked\"))) ? ((\"reject\")) : ((((countryRisk) == (\"high\")) and ((amount) >= 10000)) ? ((\"reject\")) : ((((overLimit) == true)) ? ((\"review\")) : ((((accountAgeDays) < 30) and ((amount) >= 1000)) ? ((\"review\")) : ((((velocity) >= 5)) ? ((\"review\")) : ((((countryRisk) == (\"high\"))) ? ((\"review\")) : ((\"auto_approve\")))))))"
+          },
+          {
+            "id": "decision_g1",
+            "key": "primaryReason",
+            "value": "(((countryRisk) == (\"blocked\"))) ? ((\"BLOCKED_COUNTRY\")) : ((((countryRisk) == (\"high\")) and ((amount) >= 10000)) ? ((\"HIGH_RISK_LARGE\")) : ((((overLimit) == true)) ? ((\"OVER_TIER_LIMIT\")) : ((((accountAgeDays) < 30) and ((amount) >= 1000)) ? ((\"NEW_ACCOUNT\")) : ((((velocity) >= 5)) ? ((\"HIGH_VELOCITY\")) : ((((countryRisk) == (\"high\"))) ? ((\"HIGH_RISK_COUNTRY\")) : ((\"CLEAR\")))))))"
+          },
+          {
+            "id": "decision_g2",
+            "key": "decision__hit",
+            "value": "(((countryRisk) == (\"blocked\"))) ? ((\"n73\")) : ((((countryRisk) == (\"high\")) and ((amount) >= 10000)) ? ((\"n77\")) : ((((overLimit) == true)) ? ((\"n79\")) : ((((accountAgeDays) < 30) and ((amount) >= 1000)) ? ((\"n83\")) : ((((velocity) >= 5)) ? ((\"n85\")) : ((((countryRisk) == (\"high\"))) ? ((\"n87\")) : ((\"default\")))))))"
+          }
+        ],
+        "passThrough": true,
+        "inputField": null,
+        "outputPath": null,
+        "executionMode": "single"
+      }
+    },
+    {
+      "id": "signals",
+      "type": "expressionNode",
+      "name": "Risk signals",
+      "position": {
+        "x": 960,
+        "y": 200
+      },
+      "content": {
+        "expressions": [
+          {
+            "id": "signals_g0",
+            "key": "reasons",
+            "value": "flatten([(((countryRisk) == (\"blocked\"))) ? ([(\"BLOCKED_COUNTRY\")]) : ([]), (((countryRisk) == (\"high\"))) ? ([(\"HIGH_RISK_COUNTRY\")]) : ([]), (((overLimit) == true)) ? ([(\"OVER_TIER_LIMIT\")]) : ([]), (((accountAgeDays) < 30) and ((amount) >= 1000)) ? ([(\"NEW_ACCOUNT\")]) : ([]), (((velocity) >= 5)) ? ([(\"HIGH_VELOCITY\")]) : ([])])"
+          },
+          {
+            "id": "signals_g1",
+            "key": "signals__hit",
+            "value": "[(((countryRisk) == (\"blocked\"))) ? ((\"n103\")) : (\"\"), (((countryRisk) == (\"high\"))) ? ((\"n108\")) : (\"\"), (((overLimit) == true)) ? ((\"n113\")) : (\"\"), (((accountAgeDays) < 30) and ((amount) >= 1000)) ? ((\"n118\")) : (\"\"), (((velocity) >= 5)) ? ((\"n124\")) : (\"\")]"
+          }
+        ],
+        "passThrough": true,
+        "inputField": null,
+        "outputPath": null,
+        "executionMode": "single"
+      }
+    },
+    {
+      "id": "result",
+      "type": "expressionNode",
+      "name": "Result",
+      "position": {
+        "x": 1260,
+        "y": 200
+      },
+      "content": {
+        "expressions": [
+          {
+            "id": "result_e0",
+            "key": "decision",
+            "value": "decision"
+          },
+          {
+            "id": "result_e1",
+            "key": "primaryReason",
+            "value": "primaryReason"
+          },
+          {
+            "id": "result_e2",
+            "key": "reasons",
+            "value": "reasons ?? []"
+          }
+        ],
+        "passThrough": false,
+        "inputField": null,
+        "outputPath": null,
+        "executionMode": "single"
+      }
+    },
+    {
+      "id": "out",
+      "type": "outputNode",
+      "name": "Decision",
+      "position": {
+        "x": 1560,
+        "y": 200
+      },
+      "content": {
+        "schema": ""
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e0",
+      "type": "edge",
+      "sourceId": "in",
+      "targetId": "derive"
+    },
+    {
+      "id": "e1",
+      "type": "edge",
+      "sourceId": "derive",
+      "targetId": "decision"
+    },
+    {
+      "id": "e2",
+      "type": "edge",
+      "sourceId": "decision",
+      "targetId": "signals"
+    },
+    {
+      "id": "e3",
+      "type": "edge",
+      "sourceId": "signals",
+      "targetId": "result"
+    },
+    {
+      "id": "e4",
+      "type": "edge",
+      "sourceId": "result",
+      "targetId": "out"
+    }
+  ],
+  "policy": {
+    "decision": {
+      "default": [
+        {
+          "actionId": "approve",
+          "params": {
+            "reason": "CLEAR"
+          }
+        }
+      ],
+      "trees": [
+        {
+          "id": "n99",
+          "name": "Decision",
+          "root": {
+            "id": "n96",
+            "type": "condition",
+            "when": {
+              "id": "n98",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n97",
+                  "kind": "test",
+                  "field": "countryRisk",
+                  "op": "=",
+                  "value": "blocked"
+                }
+              ]
+            },
+            "then": {
+              "id": "n73",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "reject",
+                  "params": {
+                    "reason": "BLOCKED_COUNTRY"
+                  }
+                }
+              ]
+            },
+            "else": {
+              "id": "n95",
+              "type": "condition",
+              "when": {
+                "id": "n76",
+                "kind": "group",
+                "combinator": "and",
+                "items": [
+                  {
+                    "id": "n74",
+                    "kind": "test",
+                    "field": "countryRisk",
+                    "op": "=",
+                    "value": "high"
+                  },
+                  {
+                    "id": "n75",
+                    "kind": "test",
+                    "field": "amount",
+                    "op": ">=",
+                    "value": 10000
+                  }
+                ]
+              },
+              "then": {
+                "id": "n77",
+                "type": "actions",
+                "actions": [
+                  {
+                    "actionId": "reject",
+                    "params": {
+                      "reason": "HIGH_RISK_LARGE"
+                    }
+                  }
+                ]
+              },
+              "else": {
+                "id": "n94",
+                "type": "condition",
+                "when": {
+                  "id": "n93",
+                  "kind": "group",
+                  "combinator": "and",
+                  "items": [
+                    {
+                      "id": "n78",
+                      "kind": "test",
+                      "field": "overLimit",
+                      "op": "=",
+                      "value": true
+                    }
+                  ]
+                },
+                "then": {
+                  "id": "n79",
+                  "type": "actions",
+                  "actions": [
+                    {
+                      "actionId": "review",
+                      "params": {
+                        "reason": "OVER_TIER_LIMIT"
+                      }
+                    }
+                  ]
+                },
+                "else": {
+                  "id": "n92",
+                  "type": "condition",
+                  "when": {
+                    "id": "n82",
+                    "kind": "group",
+                    "combinator": "and",
+                    "items": [
+                      {
+                        "id": "n80",
+                        "kind": "test",
+                        "field": "accountAgeDays",
+                        "op": "<",
+                        "value": 30
+                      },
+                      {
+                        "id": "n81",
+                        "kind": "test",
+                        "field": "amount",
+                        "op": ">=",
+                        "value": 1000
+                      }
+                    ]
+                  },
+                  "then": {
+                    "id": "n83",
+                    "type": "actions",
+                    "actions": [
+                      {
+                        "actionId": "review",
+                        "params": {
+                          "reason": "NEW_ACCOUNT"
+                        }
+                      }
+                    ]
+                  },
+                  "else": {
+                    "id": "n91",
+                    "type": "condition",
+                    "when": {
+                      "id": "n90",
+                      "kind": "group",
+                      "combinator": "and",
+                      "items": [
+                        {
+                          "id": "n84",
+                          "kind": "test",
+                          "field": "velocity",
+                          "op": ">=",
+                          "value": 5
+                        }
+                      ]
+                    },
+                    "then": {
+                      "id": "n85",
+                      "type": "actions",
+                      "actions": [
+                        {
+                          "actionId": "review",
+                          "params": {
+                            "reason": "HIGH_VELOCITY"
+                          }
+                        }
+                      ]
+                    },
+                    "else": {
+                      "id": "n89",
+                      "type": "condition",
+                      "when": {
+                        "id": "n88",
+                        "kind": "group",
+                        "combinator": "and",
+                        "items": [
+                          {
+                            "id": "n86",
+                            "kind": "test",
+                            "field": "countryRisk",
+                            "op": "=",
+                            "value": "high"
+                          }
+                        ]
+                      },
+                      "then": {
+                        "id": "n87",
+                        "type": "actions",
+                        "actions": [
+                          {
+                            "actionId": "review",
+                            "params": {
+                              "reason": "HIGH_RISK_COUNTRY"
+                            }
+                          }
+                        ]
+                      },
+                      "else": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "signals": {
+      "default": [],
+      "trees": [
+        {
+          "id": "n104",
+          "name": "Blocked country",
+          "root": {
+            "id": "n100",
+            "type": "condition",
+            "when": {
+              "id": "n102",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n101",
+                  "kind": "test",
+                  "field": "countryRisk",
+                  "op": "=",
+                  "value": "blocked"
+                }
+              ]
+            },
+            "then": {
+              "id": "n103",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "addReason",
+                  "params": {
+                    "code": "BLOCKED_COUNTRY"
+                  }
+                }
+              ]
+            },
+            "else": null
+          }
+        },
+        {
+          "id": "n109",
+          "name": "High-risk country",
+          "root": {
+            "id": "n105",
+            "type": "condition",
+            "when": {
+              "id": "n107",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n106",
+                  "kind": "test",
+                  "field": "countryRisk",
+                  "op": "=",
+                  "value": "high"
+                }
+              ]
+            },
+            "then": {
+              "id": "n108",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "addReason",
+                  "params": {
+                    "code": "HIGH_RISK_COUNTRY"
+                  }
+                }
+              ]
+            },
+            "else": null
+          }
+        },
+        {
+          "id": "n114",
+          "name": "Over tier limit",
+          "root": {
+            "id": "n110",
+            "type": "condition",
+            "when": {
+              "id": "n112",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n111",
+                  "kind": "test",
+                  "field": "overLimit",
+                  "op": "=",
+                  "value": true
+                }
+              ]
+            },
+            "then": {
+              "id": "n113",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "addReason",
+                  "params": {
+                    "code": "OVER_TIER_LIMIT"
+                  }
+                }
+              ]
+            },
+            "else": null
+          }
+        },
+        {
+          "id": "n120",
+          "name": "New account, sizeable payout",
+          "root": {
+            "id": "n119",
+            "type": "condition",
+            "when": {
+              "id": "n117",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n115",
+                  "kind": "test",
+                  "field": "accountAgeDays",
+                  "op": "<",
+                  "value": 30
+                },
+                {
+                  "id": "n116",
+                  "kind": "test",
+                  "field": "amount",
+                  "op": ">=",
+                  "value": 1000
+                }
+              ]
+            },
+            "then": {
+              "id": "n118",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "addReason",
+                  "params": {
+                    "code": "NEW_ACCOUNT"
+                  }
+                }
+              ]
+            },
+            "else": null
+          }
+        },
+        {
+          "id": "n125",
+          "name": "High velocity",
+          "root": {
+            "id": "n121",
+            "type": "condition",
+            "when": {
+              "id": "n123",
+              "kind": "group",
+              "combinator": "and",
+              "items": [
+                {
+                  "id": "n122",
+                  "kind": "test",
+                  "field": "velocity",
+                  "op": ">=",
+                  "value": 5
+                }
+              ]
+            },
+            "then": {
+              "id": "n124",
+              "type": "actions",
+              "actions": [
+                {
+                  "actionId": "addReason",
+                  "params": {
+                    "code": "HIGH_VELOCITY"
+                  }
+                }
+              ]
+            },
+            "else": null
+          }
+        }
+      ]
+    }
+  }
+}

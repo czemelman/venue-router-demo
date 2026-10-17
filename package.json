@@ -1,0 +1,19 @@
+{
+  "name": "venue-router-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter \"./apps/*\" dev",
+    "build": "pnpm --filter @venue/web build",
+    "typecheck": "pnpm -r --filter \"./apps/*\" typecheck",
+    "test": "pnpm -r test",
+    "recompile": "pnpm --filter @venue/server recompile"
+  },
+  "version": "0.1.0",
+  "description": "A visual decision-rules studio on GoRules ZEN. Build, test, version and replay rules without writing expressions.",
+  "license": "MIT",
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,293 @@
+{
+  "name": "payout-approval",
+  "description": "Decide whether a payout is auto-approved, sent to manual review, or rejected.",
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "customerTier",
+      "amount",
+      "accountAgeDays",
+      "destinationCountry",
+      "velocity"
+    ],
+    "properties": {
+      "customerTier": {
+        "type": "string",
+        "enum": [
+          "platinum",
+          "gold",
+          "standard"
+        ],
+        "default": "standard"
+      },
+      "amount": {
+        "type": "number",
+        "minimum": 0,
+        "default": 500
+      },
+      "accountAgeDays": {
+        "type": "number",
+        "minimum": 0,
+        "default": 365
+      },
+      "destinationCountry": {
+        "type": "string",
+        "title": "Destination country (ISO-2)",
+        "default": "DE"
+      },
+      "velocity": {
+        "type": "number",
+        "minimum": 0,
+        "title": "Payouts in last 24h",
+        "default": 0
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "decision": {
+        "type": "string",
+        "enum": [
+          "auto_approve",
+          "review",
+          "reject"
+        ]
+      },
+      "primaryReason": {
+        "type": "string"
+      },
+      "reasons": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "rules": {
+    "fields": [
+      {
+        "id": "customerTier",
+        "label": "Customer tier",
+        "group": "Customer",
+        "type": "enum",
+        "expr": "customerTier",
+        "options": [
+          "platinum",
+          "gold",
+          "standard"
+        ]
+      },
+      {
+        "id": "accountAgeDays",
+        "label": "Account age (days)",
+        "group": "Customer",
+        "type": "number",
+        "expr": "accountAgeDays"
+      },
+      {
+        "id": "amount",
+        "label": "Payout amount",
+        "group": "Payout",
+        "type": "number",
+        "expr": "amount"
+      },
+      {
+        "id": "velocity",
+        "label": "Payouts in last 24h",
+        "group": "Payout",
+        "type": "number",
+        "expr": "velocity"
+      },
+      {
+        "id": "destinationCountry",
+        "label": "Destination country (ISO-2)",
+        "group": "Payout",
+        "type": "text",
+        "expr": "destinationCountry"
+      },
+      {
+        "id": "countryRisk",
+        "label": "Destination country risk",
+        "group": "Risk",
+        "type": "enum",
+        "expr": "countryRisk",
+        "options": [
+          "blocked",
+          "high",
+          "low"
+        ],
+        "hint": "From the live risk-country lists"
+      },
+      {
+        "id": "overLimit",
+        "label": "Amount exceeds tier limit",
+        "group": "Risk",
+        "type": "boolean",
+        "expr": "overLimit"
+      },
+      {
+        "id": "tierLimit",
+        "label": "Tier payout limit",
+        "group": "Risk",
+        "type": "number",
+        "expr": "tierLimit"
+      },
+      {
+        "id": "meta.bucket",
+        "label": "Share of traffic",
+        "group": "Traffic",
+        "type": "percent",
+        "expr": "meta.bucket",
+        "hint": "Sends a stable percentage of requests down a branch."
+      }
+    ],
+    "actions": [
+      {
+        "id": "approve",
+        "label": "Auto-approve payout",
+        "tone": "good",
+        "params": [
+          {
+            "name": "reason",
+            "label": "Reason code",
+            "type": "text",
+            "default": "REASON"
+          }
+        ],
+        "emits": [
+          {
+            "output": "decision",
+            "value": "auto_approve"
+          },
+          {
+            "output": "primaryReason",
+            "param": "reason"
+          }
+        ]
+      },
+      {
+        "id": "review",
+        "label": "Send to manual review",
+        "tone": "warn",
+        "params": [
+          {
+            "name": "reason",
+            "label": "Reason code",
+            "type": "text",
+            "default": "REASON"
+          }
+        ],
+        "emits": [
+          {
+            "output": "decision",
+            "value": "review"
+          },
+          {
+            "output": "primaryReason",
+            "param": "reason"
+          }
+        ]
+      },
+      {
+        "id": "reject",
+        "label": "Reject payout",
+        "tone": "bad",
+        "params": [
+          {
+            "name": "reason",
+            "label": "Reason code",
+            "type": "text",
+            "default": "REASON"
+          }
+        ],
+        "emits": [
+          {
+            "output": "decision",
+            "value": "reject"
+          },
+          {
+            "output": "primaryReason",
+            "param": "reason"
+          }
+        ]
+      },
+      {
+        "id": "addReason",
+        "label": "Add risk signal",
+        "tone": "info",
+        "params": [
+          {
+            "name": "code",
+            "label": "Signal code",
+            "type": "text",
+            "default": "SIGNAL"
+          }
+        ],
+        "emits": [
+          {
+            "output": "reasons",
+            "param": "code",
+            "merge": "append"
+          }
+        ]
+      }
+    ],
+    "sets": [
+      {
+        "id": "decision",
+        "title": "Decision rules",
+        "description": "Decide what happens to a payout. The first matching branch wins.",
+        "mode": "first",
+        "node": "decision",
+        "fields": [
+          "customerTier",
+          "accountAgeDays",
+          "amount",
+          "velocity",
+          "destinationCountry",
+          "countryRisk",
+          "overLimit",
+          "tierLimit",
+          "meta.bucket"
+        ],
+        "actions": [
+          "approve",
+          "review",
+          "reject"
+        ],
+        "default": [
+          {
+            "actionId": "approve",
+            "params": {
+              "reason": "CLEAR"
+            }
+          }
+        ]
+      },
+      {
+        "id": "signals",
+        "title": "Risk signals",
+        "description": "Independent checks; every rule that matches is listed as a reason.",
+        "mode": "all",
+        "node": "signals",
+        "fields": [
+          "customerTier",
+          "accountAgeDays",
+          "amount",
+          "velocity",
+          "destinationCountry",
+          "countryRisk",
+          "overLimit",
+          "tierLimit",
+          "meta.bucket"
+        ],
+        "actions": [
+          "addReason"
+        ],
+        "default": []
+      }
+    ]
+  }
+}

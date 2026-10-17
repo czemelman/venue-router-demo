@@ -1,0 +1,16 @@
+[
+  { "name": "Small payout, established account", "input": { "customerTier": "standard", "amount": 200, "accountAgeDays": 400, "destinationCountry": "DE", "velocity": 0 },
+    "expect": { "decision": "auto_approve", "primaryReason": "CLEAR", "reasons.length": 0 } },
+  { "name": "Over standard-tier limit", "input": { "customerTier": "standard", "amount": 8000, "accountAgeDays": 400, "destinationCountry": "FR", "velocity": 1 },
+    "expect": { "decision": "review", "primaryReason": "OVER_TIER_LIMIT" } },
+  { "name": "New account, mid-size payout", "input": { "customerTier": "gold", "amount": 2500, "accountAgeDays": 10, "destinationCountry": "US", "velocity": 0 },
+    "expect": { "decision": "review", "reasons": ["NEW_ACCOUNT"] } },
+  { "name": "Blocked destination", "input": { "customerTier": "platinum", "amount": 100, "accountAgeDays": 900, "destinationCountry": "KP", "velocity": 0 },
+    "expect": { "decision": "reject", "primaryReason": "BLOCKED_COUNTRY" } },
+  { "name": "Large payout to high-risk country", "input": { "customerTier": "platinum", "amount": 15000, "accountAgeDays": 900, "destinationCountry": "NG", "velocity": 0 },
+    "expect": { "decision": "reject", "primaryReason": "HIGH_RISK_LARGE" } },
+  { "name": "High velocity", "input": { "customerTier": "gold", "amount": 300, "accountAgeDays": 200, "destinationCountry": "GB", "velocity": 6 },
+    "expect": { "decision": "review", "reasons": ["HIGH_VELOCITY"] } },
+  { "name": "Platinum large payout within limit", "input": { "customerTier": "platinum", "amount": 30000, "accountAgeDays": 900, "destinationCountry": "FR", "velocity": 1 },
+    "expect": { "decision": "auto_approve" } }
+]
