@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DEMO } from "./api";
 import { Decide } from "./pages/Decide";
 import { Live } from "./pages/Live";
 import { Replay } from "./pages/Replay";
@@ -22,9 +23,9 @@ function Shell() {
         <span className="brand"><i />Rule Studio</span>
         <select className="domainsel" value={domain} onChange={(e) => setDomain(e.target.value)}>{domains.map((d) => <option key={d.name}>{d.name}</option>)}</select>
         <nav className="tabs">{(Object.keys(TABS) as Tab[]).map((t) => <button key={t} className={t === tab ? "active" : ""} onClick={() => go(t)}>{t}{t === "Rules" && dirty ? " •" : ""}</button>)}</nav>
-        <span className="right">{meta && <span className="pill ok">active {meta.activeVersion}</span>}</span>
+        <span className="right">{DEMO && <span className="demo-note" title="The engine runs in your browser. Changes stay in this browser only.">Live demo <button className="link" onClick={async () => { (await import("./demo/backend")).resetDemo(); location.reload(); }}>Reset</button></span>}{meta && <span className="pill ok">active {meta.activeVersion}</span>}</span>
       </header>
-      {error ? <div className="status bad pad">{error}</div> : domain ? <main><Page key={domain} /></main> : <div className="pad">Loading…</div>}
+      {error ? <div className="status bad pad">{error}</div> : domain ? <main><Page key={domain} /></main> : <div className="pad muted">{DEMO ? "Starting the rules engine in your browser. The first visit downloads about 15 MB; after that it loads from cache." : "Loading…"}</div>}
     </div>
   );
 }

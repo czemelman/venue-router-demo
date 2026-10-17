@@ -213,3 +213,7 @@ details { margin: 4px 0; }
 .rt-default { margin-top: 22px; padding: 14px 16px; border: 1.5px dashed #bfc6d8; border-radius: var(--radius); background: #ffffffb8; max-width: 640px; display: flex; flex-direction: column; gap: 6px; }
 .rt-default p { margin: 0 0 4px; }
 .rt-defhead { font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+/* static demo build */
+.demo-note { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; background: var(--accent-soft); color: var(--accent-2); }
+.demo-note .link { font-size: 12px; padding: 0 2px; }

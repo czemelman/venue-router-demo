@@ -4,13 +4,15 @@ A visual rules studio built on [GoRules ZEN](https://gorules.io). You build deci
 
 The demo ships with two domains. The first picks a trading venue for a crypto-to-fiat sell. The second approves, reviews or rejects payouts. They run on the same engine and the same UI. The second one exists to prove that point: adding it took a new folder and no code changes.
 
+**Try it in your browser: https://czemelman.github.io/venue-router-demo/** (no install, no server)
+
 ![Rule editor showing the strategy rules for venue selection](docs/images/rules-strategy.png)
 
 ## What it does
 
 You edit rules as a tree. Each rule reads like a sentence: `IF urgency is instant AND (customer tier is platinum OR importance is at least 80) THEN use the fastest strategy`. Conditions can be grouped with AND and OR, nested as deep as you need, and dragged between branches. Undo, redo, copy and paste all work.
 
-The server compiles each tree into GoRules expression nodes and runs it on the ZEN engine. The browser never evaluates a rule. When you press Test, the request goes to the server, and the branch that matched lights up in the editor.
+The server compiles each tree into GoRules expression nodes and runs it on the ZEN engine. In the normal setup the browser never evaluates a rule: when you press Test, the request goes to the server, and the branch that matched lights up in the editor. The hosted demo has no server, so it runs the same engine inside your tab instead (see Live demo below).
 
 ![Test panel with the matched branch highlighted](docs/images/rules-test-panel.png)
 
@@ -25,6 +27,20 @@ Other things worth knowing about:
 ![Live venue board](docs/images/live-venues.png)
 
 ![Scenario results, all passing](docs/images/scenarios.png)
+
+## Live demo
+
+The hosted demo has no backend. It runs the WebAssembly build of ZEN 2.1.7, the same engine version the server uses, inside your browser tab. A small stand-in for the API (`apps/web/src/demo/backend.ts`) answers the same routes the server does, so the UI is identical in both modes.
+
+Everything works: editing rules, testing, publishing, rolling back, scenarios, replay, live venue overrides, and both domains. Your edits and published versions are saved in your browser's local storage, so nobody else sees them. The Reset button next to "Live demo" in the header restores the original rules.
+
+A few differences from the server setup:
+
+- The first visit downloads about 15 MB, which is the engine. After that the browser caches it.
+- Replay is capped at 1000 inputs, since the engine shares your tab.
+- There is no decision log file. The Decide page keeps the last 500 decisions in memory only.
+
+A test runs all 18 scenarios through both the native engine and the WebAssembly one and requires identical output. To build the demo yourself, run `pnpm --filter @venue/web build:demo`. A GitHub Actions workflow publishes it to Pages on every push to `main`.
 
 ## Quick start
 
@@ -44,7 +60,8 @@ Other commands:
 ```sh
 pnpm test        # server and web unit tests
 pnpm typecheck   # TypeScript, both apps
-pnpm build       # production build of the web app
+pnpm build       # production build of the web app (talks to the server)
+pnpm --filter @venue/web build:demo   # static build with the engine in the browser
 pnpm recompile   # rebuild generated expression nodes from the rule trees
 ```
 
@@ -85,10 +102,10 @@ The engine rules the server follows:
 
 ```
 apps/
-  server/            Fastify API, compiler, versioning, replay, scenarios
-  web/               React app and the rule tree editor
+  server/            Fastify API, versioning, decision log
+  web/               React app, rule tree editor, and the in-browser backend for the demo
 packages/
-  shared/            Types shared by both apps
+  shared/            Types, rule compiler, scenario and replay logic used by both
 domains/
   venue-selection/   Domain 1: pick a trading venue
   payout-approval/   Domain 2: approve, review or reject a payout
@@ -136,7 +153,7 @@ All routes are scoped to a domain, for example `/domains/venue-selection/decide`
 
 ## Tests
 
-The server suite checks the JDM schema, all eleven venue scenarios through the real HTTP layer, the compiler for every operator, publish and rollback, and replay. It works on a temporary copy of `domains/`, so running it never touches your rules. The web suite covers the tree operations: drop, move, wrap, paste and validation.
+The server suite checks the JDM schema, all eleven venue scenarios through the real HTTP layer, the compiler for every operator, publish and rollback, replay, and parity between the native and WebAssembly engines. It works on a temporary copy of `domains/`, so running it never touches your rules. The web suite covers the tree operations: drop, move, wrap, paste and validation.
 
 Not covered by automated tests: drag-and-drop in a real browser. That part was checked by hand.
 
@@ -147,7 +164,7 @@ This is a demo, and a few things are left out on purpose.
 - There is no fail-over action. The engine ranks venues up front and returns a fallback list, but nothing downstream retries on a soft decline.
 - Rule trees are per rule set. There are no shared profiles that one tree can reuse across connectors.
 - Risk metrics over a time window, such as chargebacks in the last 30 days, need history that the demo does not keep.
-- Authentication, multi-user editing and a database are not included. Versions and drafts are plain files.
+- Authentication, multi-user editing and a database are not included. Versions and drafts are plain files, or browser storage in the hosted demo.
 
 ## Built with
 

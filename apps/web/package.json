@@ -6,15 +6,20 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:demo": "VITE_DEMO=1 vite build"
   },
   "dependencies": {
     "@gorules/jdm-editor": "1.52.0",
+    "@gorules/zen-engine": "2.1.7",
+    "@gorules/zen-engine-wasm32-wasip1": "2.1.7",
     "@monaco-editor/react": "^4.6.0",
+    "@venue/shared": "workspace:*",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "monaco-editor": "^0.52.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@venue/shared": "workspace:*"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.0",

@@ -47,7 +47,7 @@ export function createVenueFacts(opts: { jitter?: boolean } = {}): FactsProvider
   const reroll = () => VENUES.forEach((v) => jit.set(v.id, { liq: roll(0.08), spread: roll(0.06), fill: roll(0.01), lat: roll(0.08) }));
   let frozen = 0;
   const timer = opts.jitter ? setInterval(() => { if (!frozen) reroll(); }, 5000) : undefined;
-  timer?.unref();
+  (timer as { unref?: () => void } | undefined)?.unref?.(); // Node only; browsers return a number
   if (opts.jitter) reroll();
 
   function build(amountUsd: number) {
@@ -137,4 +137,4 @@ export function createVenueFacts(opts: { jitter?: boolean } = {}): FactsProvider
 }
 
 // Jitter is off under vitest so scenario expectations stay deterministic.
-export default createVenueFacts({ jitter: !process.env.VITEST });
+export default createVenueFacts({ jitter: !(typeof process !== "undefined" && process.env?.VITEST) });

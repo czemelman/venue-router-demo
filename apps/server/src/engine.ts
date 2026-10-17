@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { ZenEngine, type ZenDecision } from "@gorules/zen-engine";
+import { bucketOf } from "@venue/shared";
 import type { Domain } from "./domains.js";
 
 export interface EvaluateOptions {
@@ -45,7 +46,7 @@ export class DecisionService {
     const context = {
       ...(input as object),
       ...facts,
-      meta: { now: new Date().toISOString(), domain: domain.name, version, bucket: bucketOf(domain, input) },
+      meta: { now: new Date().toISOString(), domain: domain.name, version, bucket: bucketOf(domain.meta, input) },
     };
     const out = await this.decisionFor(domain, version).evaluate(context, trace ? { trace: true } : undefined);
     return {
@@ -70,13 +71,3 @@ export class DecisionService {
 }
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 16);
-
-/**
- * Stable 0-99 bucket for traffic splits (A/B tests, gradual rollouts). Hashed from `bucketBy` in domain.json
- * (a dotted path such as "customer.id") or from the whole input, so the same customer always lands in the same bucket.
- */
-function bucketOf(domain: Domain, input: unknown): number {
-  const path = (domain.meta as { bucketBy?: string }).bucketBy;
-  const key = path ? path.split(".").reduce<any>((o, k) => o?.[k], input) : input;
-  return parseInt(createHash("sha256").update(JSON.stringify(key ?? null)).digest("hex").slice(0, 8), 16) % 100;
-}

@@ -85,3 +85,7 @@ export type TreeNode = ConditionNode | ActionsNode;
 export interface RuleTree { id: string; name?: string; root: TreeNode | null }
 export interface SetPolicy { trees: RuleTree[]; default: ActionInstance[] }
 export type Policy = Record<string, SetPolicy>;
+
+export * from "./compile.js";
+export * from "./core.js";
+export * from "./sha256.js";

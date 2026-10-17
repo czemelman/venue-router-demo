@@ -196,6 +196,9 @@ importers:
         specifier: ^3.23.0
         version: 3.25.76
     devDependencies:
+      '@gorules/zen-engine-wasm32-wasip1':
+        specifier: 2.1.7
+        version: 2.1.7
       '@types/node':
         specifier: ^22.0.0
         version: 22.20.5
@@ -214,12 +217,24 @@ importers:
       '@gorules/jdm-editor':
         specifier: 1.52.0
         version: 1.52.0(@types/node@22.20.5)(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@gorules/zen-engine':
+        specifier: 2.1.7
+        version: 2.1.7
+      '@gorules/zen-engine-wasm32-wasip1':
+        specifier: 2.1.7
+        version: 2.1.7
       '@monaco-editor/react':
         specifier: ^4.6.0
         version: 4.7.0(monaco-editor@0.52.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@venue/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
+      ajv-formats:
+        specifier: ^3.0.1
+        version: 3.0.1
       monaco-editor:
         specifier: ^0.52.0
         version: 0.52.2
@@ -3157,17 +3172,14 @@ snapshots:
     dependencies:
       '@emnapi/wasi-threads': 2.2.0
       tslib: 2.8.1
-    optional: true
 
   '@emnapi/runtime@2.0.0-alpha.6':
     dependencies:
       tslib: 2.8.1
-    optional: true
 
   '@emnapi/wasi-threads@2.2.0':
     dependencies:
       tslib: 2.8.1
-    optional: true
 
   '@emotion/hash@0.8.0': {}
 
@@ -3504,7 +3516,6 @@ snapshots:
       '@emnapi/runtime': 2.0.0-alpha.6
       '@napi-rs/async-runtime': 0.2.0
       '@napi-rs/wasm-runtime': 1.2.5(@emnapi/core@2.0.0-alpha.6)(@emnapi/runtime@2.0.0-alpha.6)
-    optional: true
 
   '@gorules/zen-engine-wasm@0.23.1': {}
 
@@ -3571,8 +3582,7 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@napi-rs/async-runtime@0.2.0':
-    optional: true
+  '@napi-rs/async-runtime@0.2.0': {}
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
@@ -3582,7 +3592,6 @@ snapshots:
       '@emnapi/core': 2.0.0-alpha.6
       '@emnapi/runtime': 2.0.0-alpha.6
       '@tybys/wasm-util': 0.10.4
-    optional: true
 
   '@pinojs/redact@0.4.0': {}
 
@@ -3998,7 +4007,6 @@ snapshots:
   '@tybys/wasm-util@0.10.4':
     dependencies:
       tslib: 2.8.1
-    optional: true
 
   '@types/babel__core@7.20.5':
     dependencies:
@@ -6389,8 +6397,7 @@ snapshots:
 
   ts-pattern@5.9.2: {}
 
-  tslib@2.8.1:
-    optional: true
+  tslib@2.8.1: {}
 
   tsx@4.23.15:
     dependencies:
